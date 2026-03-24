@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Horizon Stabilization Recorder</title>
+  <style>
+    body { text-align: center; font-family: sans-serif; }
+    canvas { width: 100%; max-width: 400px; background: black; }
+    button { margin: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Stabilized Camera Recorder</h2>
+
+<video id="video" autoplay playsinline style="display:none;"></video>
+<canvas id="canvas"></canvas>
+
+<br/>
+<button onclick="startRecording()">Start Recording</button>
+<button onclick="stopRecording()">Stop & Download</button>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let mediaRecorder;
+let recordedChunks = [];
+
+let currentAngle = 0;
+
+// Start camera
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: true
+    });
+
+    video.srcObject = stream;
+
+    video.onloadedmetadata = async () => {
+      await video.play();
+      draw();
+    };
+
+  } catch (err) {
+    console.error("Camera error:", err);
+    alert("Camera access failed: " + err.message);
+  }
+}
+initCamera();
+
+// iOS permission
+if (typeof DeviceOrientationEvent.requestPermission === "function") {
+  DeviceOrientationEvent.requestPermission().catch(() => {});
+}
+
+// Smooth orientation
+window.addEventListener("deviceorientation", (event) => {
+  let targetAngle = event.gamma || 0;
+
+  // simple smoothing
+  currentAngle = 0.9 * currentAngle + 0.1 * targetAngle;
+});
+
+// Draw loop
+function draw() {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  ctx.save();
+
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(-currentAngle * Math.PI / 180);
+
+  // slight zoom to avoid black edges
+  const scale = 1.2;
+  ctx.scale(scale, scale);
+
+  ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2);
+
+  ctx.restore();
+
+  requestAnimationFrame(draw);
+}
+
+video.addEventListener("play", () => {
+  draw();
+});
+
+// Start recording
+function startRecording() {
+  const stream = canvas.captureStream(30);
+
+  mediaRecorder = new MediaRecorder(stream, {
+    mimeType: "video/webm"
+  });
+
+  recordedChunks = [];
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = download;
+
+  mediaRecorder.start();
+}
+
+// Stop + download
+function stopRecording() {
+  mediaRecorder.stop();
+}
+
+function download() {
+  const blob = new Blob(recordedChunks, { type: "video/webm" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "stabilized_video.webm";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
