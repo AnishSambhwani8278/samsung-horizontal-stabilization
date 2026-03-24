@@ -13,12 +13,13 @@
 
 <h2>Stabilized Camera Recorder</h2>
 
-<video id="video" autoplay playsinline style="display:none;"></video>
+<video id="video" autoplay playsinline muted style="display:none;"></video>
 <canvas id="canvas"></canvas>
 
 <br/>
-<button onclick="startRecording()">Start Recording</button>
-<button onclick="stopRecording()">Stop & Download</button>
+<button id="startAppBtn" onclick="initApp()">Start Camera</button>
+<button id="startRecBtn" onclick="startRecording()" style="display:none;">Start Recording</button>
+<button id="stopRecBtn" onclick="stopRecording()" style="display:none;">Stop & Download</button>
 
 <script>
 const video = document.getElementById("video");
@@ -30,8 +31,20 @@ let recordedChunks = [];
 
 let currentAngle = 0;
 
-// Start camera
-async function initCamera() {
+// Initialize App (Requires user interaction for iOS permissions and autoplay)
+async function initApp() {
+  // iOS permission
+  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+    try {
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (permission !== "granted") {
+        console.warn("Orientation permission denied.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "environment" },
@@ -41,20 +54,20 @@ async function initCamera() {
     video.srcObject = stream;
 
     video.onloadedmetadata = async () => {
-      await video.play();
-      draw();
+      try {
+        await video.play();
+        document.getElementById("startAppBtn").style.display = "none";
+        document.getElementById("startRecBtn").style.display = "inline-block";
+        document.getElementById("stopRecBtn").style.display = "inline-block";
+      } catch (err) {
+        console.error("Autoplay error:", err);
+      }
     };
 
   } catch (err) {
     console.error("Camera error:", err);
     alert("Camera access failed: " + err.message);
   }
-}
-initCamera();
-
-// iOS permission
-if (typeof DeviceOrientationEvent.requestPermission === "function") {
-  DeviceOrientationEvent.requestPermission().catch(() => {});
 }
 
 // Smooth orientation
