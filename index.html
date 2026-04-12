@@ -1,144 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Horizon Stabilization Recorder</title>
-  <style>
-    body { text-align: center; font-family: sans-serif; }
-    canvas { width: 100%; max-width: 400px; background: black; }
-    button { margin: 10px; padding: 10px 20px; }
-  </style>
-</head>
-<body>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Horizon Stabilization Recorder</title>
+  </head>
+  <body>
+    <h2>Stabilized Camera Recorder</h2>
 
-<h2>Stabilized Camera Recorder</h2>
+    <div class="video-container">
+      <video autoplay playsinline id="vid" style="display: none"></video>
+      <canvas id="canvas" style="display: none"></canvas>
+    </div>
 
-<video id="video" autoplay playsinline muted style="display:none;"></video>
-<canvas id="canvas"></canvas>
+    <button onclick="startVideo()" id="startBtn">Start</button>
+    <button onclick="stopVideo()" id="stopBtn" style="display: none">
+      Stop
+    </button>
 
-<br/>
-<button id="startAppBtn" onclick="initApp()">Start Camera</button>
-<button id="startRecBtn" onclick="startRecording()" style="display:none;">Start Recording</button>
-<button id="stopRecBtn" onclick="stopRecording()" style="display:none;">Stop & Download</button>
+    <button id="recordBtn" style="display: none">Start Recording</button>
+    <button id="stopRecBtn" style="display: none">Stop Recording</button>
 
-<script>
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+    <div id="angles" style="font-size: 20px"></div>
 
-let mediaRecorder;
-let recordedChunks = [];
-
-let currentAngle = 0;
-
-// Initialize App (Requires user interaction for iOS permissions and autoplay)
-async function initApp() {
-  // iOS permission
-  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-    try {
-      const permission = await DeviceOrientationEvent.requestPermission();
-      if (permission !== "granted") {
-        console.warn("Orientation permission denied.");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
-      audio: true
-    });
-
-    video.srcObject = stream;
-
-    video.onloadedmetadata = async () => {
-      try {
-        await video.play();
-        document.getElementById("startAppBtn").style.display = "none";
-        document.getElementById("startRecBtn").style.display = "inline-block";
-        document.getElementById("stopRecBtn").style.display = "inline-block";
-      } catch (err) {
-        console.error("Autoplay error:", err);
-      }
-    };
-
-  } catch (err) {
-    console.error("Camera error:", err);
-    alert("Camera access failed: " + err.message);
-  }
-}
-
-// Smooth orientation
-window.addEventListener("deviceorientation", (event) => {
-  let targetAngle = event.gamma || 0;
-
-  // simple smoothing
-  currentAngle = 0.9 * currentAngle + 0.1 * targetAngle;
-});
-
-// Draw loop
-function draw() {
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  ctx.save();
-
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(-currentAngle * Math.PI / 180);
-
-  // slight zoom to avoid black edges
-  const scale = 1.2;
-  ctx.scale(scale, scale);
-
-  ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2);
-
-  ctx.restore();
-
-  requestAnimationFrame(draw);
-}
-
-video.addEventListener("play", () => {
-  draw();
-});
-
-// Start recording
-function startRecording() {
-  const stream = canvas.captureStream(30);
-
-  mediaRecorder = new MediaRecorder(stream, {
-    mimeType: "video/webm"
-  });
-
-  recordedChunks = [];
-
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) recordedChunks.push(e.data);
-  };
-
-  mediaRecorder.onstop = download;
-
-  mediaRecorder.start();
-}
-
-// Stop + download
-function stopRecording() {
-  mediaRecorder.stop();
-}
-
-function download() {
-  const blob = new Blob(recordedChunks, { type: "video/webm" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "stabilized_video.webm";
-  a.click();
-
-  URL.revokeObjectURL(url);
-}
-</script>
-
-</body>
+    <script src="script.js"></script>
+  </body>
 </html>
