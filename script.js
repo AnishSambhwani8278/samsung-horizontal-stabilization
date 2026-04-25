@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 
 const startButton = document.getElementById("startBtn");
 const stopButton = document.getElementById("stopBtn");
+const syncButton = document.getElementById("syncBtn");
 
 const angles = document.getElementById("angles");
 
@@ -17,18 +18,17 @@ let chunks = [];
 let rotationAngle = 0;
 let drawRequestId;
 
+let currentAlpha = 0;
+let alphaOffset = 0;
+
 const startVideo = async () => {
     try {
         stream = await navigator.mediaDevices.getUserMedia(
             {
                 video: {
                     facingMode: "user",
-                    width: {
-                        ideal: 1280
-                    },
-                    height: {
-                        ideal: 720
-                    }
+                    width: { ideal: 1440 },
+                    height: { ideal: 1080 }
                 },
                 audio: false
             });
@@ -44,6 +44,7 @@ const startVideo = async () => {
         startButton.style.display = "none";
         stopButton.style.display = "block";
         recordBtn.style.display = "block";
+        syncButton.style.display = "block";
         
         drawCanvas();
     }
@@ -55,14 +56,25 @@ const startVideo = async () => {
 const drawCanvas = () => {
     if (video.readyState >= video.HAVE_CURRENT_DATA && canvas.width > 0 && canvas.height > 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        const scale = 1.65;
+
         ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
+
+        ctx.translate(w / 2, h / 2);
         ctx.rotate(rotationAngle);
-        ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+        ctx.scale(scale, scale);
+
+        ctx.drawImage(video, -w / 2, -h / 2, w, h);
+
         ctx.restore();
     }
+
     drawRequestId = requestAnimationFrame(drawCanvas);
-}
+};
 
 const stopVideo = () => {
     if (stream) {
@@ -77,13 +89,28 @@ const stopVideo = () => {
     stopButton.style.display = "none";
     recordBtn.style.display = "none";
     stopRecBtn.style.display = "none";
+    syncButton.style.display = "none";
 }
 
-window.addEventListener("deviceorientation", (event) => {
+const alphaFunction = (event) => {
     if (event.alpha === null) return;
-    const alpha = event.alpha.toFixed(0);
-    angles.innerHTML = `Alpha: ${alpha}`;
-    rotationAngle = alpha * (Math.PI / 180);
+    currentAlpha = event.alpha;
+    let adjustedAlpha = (currentAlpha - alphaOffset + 360) % 360;
+    rotationAngle = adjustedAlpha * Math.PI / 180;
+    angles.innerHTML = `Alpha: ${adjustedAlpha.toFixed(0)}`;
+};
+
+startButton.addEventListener("click", () => {
+    window.addEventListener("deviceorientation", alphaFunction);
+});
+
+stopButton.addEventListener("click", () => {
+    window.removeEventListener("deviceorientation", alphaFunction);
+    angles.innerHTML = "";
+})
+
+syncButton.addEventListener("click", () => {
+    alphaOffset = currentAlpha;
 });
 
 const startRecording = () => {
