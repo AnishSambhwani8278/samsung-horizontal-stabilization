@@ -11,6 +11,14 @@ const angles = document.getElementById("angles");
 const recordBtn = document.getElementById("recordBtn");
 const stopRecBtn = document.getElementById("stopRecBtn");
 
+const changeCameraBtn = document.getElementById("changeCamera");
+const videoContainer = document.getElementById("video-container");
+
+const heading = document.getElementById("heading");
+
+let targetRotation = 0;
+let smoothRotation = 0;
+
 let stream;
 let mediaRecorder;
 let chunks = [];
@@ -21,12 +29,17 @@ let drawRequestId;
 let currentAlpha = 0;
 let alphaOffset = 0;
 
+let cameraFacing = "user";
+
 const startVideo = async () => {
     try {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
         stream = await navigator.mediaDevices.getUserMedia(
             {
                 video: {
-                    facingMode: "user",
+                    facingMode: cameraFacing,
                     width: { ideal: 1440 },
                     height: { ideal: 1080 }
                 },
@@ -45,7 +58,10 @@ const startVideo = async () => {
         stopButton.style.display = "block";
         recordBtn.style.display = "block";
         syncButton.style.display = "block";
+        changeCameraBtn.style.display = "block";
+        heading.style.display = "none";
         
+        if (drawRequestId) cancelAnimationFrame(drawRequestId);
         drawCanvas();
     }
     catch (err) {
@@ -56,20 +72,25 @@ const startVideo = async () => {
 const drawCanvas = () => {
     if (video.readyState >= video.HAVE_CURRENT_DATA && canvas.width > 0 && canvas.height > 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const w = canvas.width;
         const h = canvas.height;
-
         const scale = 1.65;
+        let diff = targetRotation - smoothRotation;
 
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        if (diff < -Math.PI) diff += Math.PI * 2;
+
+        smoothRotation += diff * 0.08;
         ctx.save();
-
         ctx.translate(w / 2, h / 2);
-        ctx.rotate(rotationAngle);
+        if (cameraFacing === "user") {
+            ctx.rotate(smoothRotation);
+        }
+        else {
+            ctx.rotate(-smoothRotation);
+        }
         ctx.scale(scale, scale);
-
         ctx.drawImage(video, -w / 2, -h / 2, w, h);
-
         ctx.restore();
     }
 
@@ -90,17 +111,24 @@ const stopVideo = () => {
     recordBtn.style.display = "none";
     stopRecBtn.style.display = "none";
     syncButton.style.display = "none";
+    changeCameraBtn.style.display = "none";
+    heading.style.display = "block";
 }
 
 const alphaFunction = (event) => {
     if (event.alpha === null) return;
     currentAlpha = event.alpha;
     let adjustedAlpha = (currentAlpha - alphaOffset + 360) % 360;
-    rotationAngle = adjustedAlpha * Math.PI / 180;
+    const newAngle = adjustedAlpha * Math.PI / 180;
+    if (Math.abs(newAngle - targetRotation) > 0.01) {
+        targetRotation = newAngle;
+    }
+    targetRotation = adjustedAlpha * Math.PI / 180;
     angles.innerHTML = `Alpha: ${adjustedAlpha.toFixed(0)}`;
 };
 
 startButton.addEventListener("click", () => {
+    window.removeEventListener("deviceorientation", alphaFunction);
     window.addEventListener("deviceorientation", alphaFunction);
 });
 
@@ -112,6 +140,21 @@ stopButton.addEventListener("click", () => {
 syncButton.addEventListener("click", () => {
     alphaOffset = currentAlpha;
 });
+
+changeCameraBtn.addEventListener("click", () => {
+    if (cameraFacing === "user") {
+        cameraFacing = "environment";
+        startVideo();
+        videoContainer.style.transform = 'scaleX(1)';
+        videoContainer.style.webkitTransform = 'scaleX(1)';
+    }
+    else {
+        cameraFacing = "user";
+        startVideo();
+        videoContainer.style.transform = 'scaleX(-1)';
+        videoContainer.style.webkitTransform = 'scaleX(-1)';
+    }
+})
 
 const startRecording = () => {
     const canvasStream = canvas.captureStream(30);

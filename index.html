@@ -6,25 +6,31 @@
     <title>Horizon Stabilization Recorder</title>
   </head>
   <body>
-    <h2>Stabilized Camera Recorder</h2>
-
-    <div class="video-container">
+    <div class="heading" id="heading" style="display: block">
+      <h2>Stabilized Camera Recorder</h2>
+    </div>
+    
+    <div class="video-container" id="video-container">
       <video autoplay playsinline id="vid" style="display: none"></video>
       <canvas id="canvas" style="display: none"></canvas>
     </div>
 
-    <button onclick="startVideo()" id="startBtn">Start</button>
-    <button onclick="stopVideo()" id="stopBtn" style="display: none">
-      Stop
-    </button>
-    <button id="syncBtn" style="display: none">
-      Sync Camera
-    </button>
+    <div class="container">
+      <button onclick="startVideo()" id="startBtn">Start</button>
+      <button onclick="stopVideo()" id="stopBtn" style="display: none">
+        Stop
+      </button>
+      <button id="syncBtn" style="display: none">
+        Sync Camera
+      </button>
 
-    <button id="recordBtn" style="display: none">Start Recording</button>
-    <button id="stopRecBtn" style="display: none">Stop Recording</button>
+      <button id="changeCamera" style="display: none">Change Camera</button>
 
-    <div id="angles" style="font-size: 20px"></div>
+      <button id="recordBtn" style="display: none">Start Recording</button>
+      <button id="stopRecBtn" style="display: none">Stop Recording</button>
+    </div>
+
+    <div id="angles" style="font-size: 20px; margin: 5% 0"></div>
 
     <script src="script.js"></script>
   </body>
