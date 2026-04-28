@@ -54,3 +54,18 @@ canvas {
     justify-content: center;
     gap: 5%;
 }
+
+.header-container {
+    display: flex;
+    justify-content: center;
+    gap: 5%;
+}
+
+#howToUse {
+    max-width: 420px;
+    margin: 20px auto;
+    padding: 25px;
+    border-radius: 14px;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+}

@@ -15,6 +15,7 @@ const changeCameraBtn = document.getElementById("changeCamera");
 const videoContainer = document.getElementById("video-container");
 
 const heading = document.getElementById("heading");
+const howToUse = document.getElementById("howToUse");
 
 let targetRotation = 0;
 let smoothRotation = 0;
@@ -63,6 +64,7 @@ const startVideo = async () => {
         syncButton.style.display = "block";
         changeCameraBtn.style.display = "block";
         heading.style.display = "none";
+        howToUse.style.display = "none"
         
         if (drawRequestId) cancelAnimationFrame(drawRequestId);
         drawCanvas();
@@ -116,6 +118,7 @@ const stopVideo = () => {
     syncButton.style.display = "none";
     changeCameraBtn.style.display = "none";
     heading.style.display = "block";
+    howToUse.style.display = "block"
 }
 
 const alphaFunction = (event) => {
