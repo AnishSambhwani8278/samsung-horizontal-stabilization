@@ -19,6 +19,9 @@ const heading = document.getElementById("heading");
 let targetRotation = 0;
 let smoothRotation = 0;
 
+let previousAlpha = null;
+let continuousAngle = 0;
+
 let stream;
 let mediaRecorder;
 let chunks = [];
@@ -119,11 +122,20 @@ const alphaFunction = (event) => {
     if (event.alpha === null) return;
     currentAlpha = event.alpha;
     let adjustedAlpha = (currentAlpha - alphaOffset + 360) % 360;
-    const newAngle = adjustedAlpha * Math.PI / 180;
-    if (Math.abs(newAngle - targetRotation) > 0.01) {
-        targetRotation = newAngle;
+
+    if (previousAlpha === null) {
+        previousAlpha = adjustedAlpha;
     }
-    targetRotation = adjustedAlpha * Math.PI / 180;
+
+    let delta = adjustedAlpha - previousAlpha;
+
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    continuousAngle += delta;
+    previousAlpha = adjustedAlpha;
+
+    targetRotation = continuousAngle * Math.PI / 180;
     angles.innerHTML = `Alpha: ${adjustedAlpha.toFixed(0)}`;
 };
 
