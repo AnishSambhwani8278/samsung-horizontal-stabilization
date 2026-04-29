@@ -11,11 +11,12 @@ const angles = document.getElementById("angles");
 const recordBtn = document.getElementById("recordBtn");
 const stopRecBtn = document.getElementById("stopRecBtn");
 
-const changeCameraBtn = document.getElementById("changeCamera");
 const videoContainer = document.getElementById("video-container");
 
 const heading = document.getElementById("heading");
 const howToUse = document.getElementById("howToUse");
+
+const cameraSelect = document.getElementById("cameraSelect");
 
 let targetRotation = 0;
 let smoothRotation = 0;
@@ -33,7 +34,48 @@ let drawRequestId;
 let currentAlpha = 0;
 let alphaOffset = 0;
 
-let cameraFacing = "user";
+let selectedCameraId = "";
+let cameras = [];
+let isFrontCamera = true;
+
+const loadCameras = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+
+    cameras = devices.filter(
+        device => device.kind === "videoinput"
+    );
+
+    cameraSelect.innerHTML = "";
+
+    cameras.forEach((camera, index) => {
+        const option = document.createElement("option");
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+    });
+
+    if (cameras.length > 0) {
+        selectedCameraId = cameras[0].deviceId;
+        detectCameraType(selectedCameraId);
+    }
+};
+
+const detectCameraType = (deviceId) => {
+    const cam = cameras.find(c => c.deviceId === deviceId);
+
+    if (!cam) {
+        isFrontCamera = true;
+        return;
+    }
+
+    const label = cam.label.toLowerCase();
+
+    isFrontCamera =
+        label.includes("front") ||
+        label.includes("user") ||
+        label.includes("face") ||
+        label.includes("webcam");
+};
 
 const startVideo = async () => {
     try {
@@ -43,15 +85,17 @@ const startVideo = async () => {
         stream = await navigator.mediaDevices.getUserMedia(
             {
                 video: {
-                    facingMode: cameraFacing,
+                    deviceId: selectedCameraId
+                        ? { exact: selectedCameraId }
+                        : undefined,
                     width: { ideal: 1440 },
                     height: { ideal: 1080 }
                 },
                 audio: false
             });
-        
+
         video.srcObject = stream;
-        
+
         video.onloadedmetadata = () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -62,10 +106,9 @@ const startVideo = async () => {
         stopButton.style.display = "block";
         recordBtn.style.display = "block";
         syncButton.style.display = "block";
-        changeCameraBtn.style.display = "block";
         heading.style.display = "none";
         howToUse.style.display = "none"
-        
+
         if (drawRequestId) cancelAnimationFrame(drawRequestId);
         drawCanvas();
     }
@@ -85,13 +128,12 @@ const drawCanvas = () => {
         if (diff > Math.PI) diff -= Math.PI * 2;
         if (diff < -Math.PI) diff += Math.PI * 2;
 
-        smoothRotation += diff * 0.08;
+        smoothRotation += diff * 0.5;
         ctx.save();
         ctx.translate(w / 2, h / 2);
-        if (cameraFacing === "user") {
+        if (isFrontCamera) {
             ctx.rotate(smoothRotation);
-        }
-        else {
+        } else {
             ctx.rotate(-smoothRotation);
         }
         ctx.scale(scale, scale);
@@ -116,7 +158,6 @@ const stopVideo = () => {
     recordBtn.style.display = "none";
     stopRecBtn.style.display = "none";
     syncButton.style.display = "none";
-    changeCameraBtn.style.display = "none";
     heading.style.display = "block";
     howToUse.style.display = "block"
 }
@@ -142,34 +183,25 @@ const alphaFunction = (event) => {
     angles.innerHTML = `Alpha: ${adjustedAlpha.toFixed(0)}`;
 };
 
-startButton.addEventListener("click", () => {
+startButton.addEventListener("click", async () => {
+    await loadCameras();
+    await startVideo();
+
     window.removeEventListener("deviceorientation", alphaFunction);
     window.addEventListener("deviceorientation", alphaFunction);
+    cameraSelect.style.display = "block";
 });
 
-stopButton.addEventListener("click", () => {
+stopButton.addEventListener("click", async () => {
+    await stopVideo();
     window.removeEventListener("deviceorientation", alphaFunction);
     angles.innerHTML = "";
+    cameraSelect.style.display = "none";
 })
 
 syncButton.addEventListener("click", () => {
     alphaOffset = currentAlpha;
 });
-
-changeCameraBtn.addEventListener("click", () => {
-    if (cameraFacing === "user") {
-        cameraFacing = "environment";
-        startVideo();
-        videoContainer.style.transform = 'scaleX(1)';
-        videoContainer.style.webkitTransform = 'scaleX(1)';
-    }
-    else {
-        cameraFacing = "user";
-        startVideo();
-        videoContainer.style.transform = 'scaleX(-1)';
-        videoContainer.style.webkitTransform = 'scaleX(-1)';
-    }
-})
 
 const startRecording = () => {
     const canvasStream = canvas.captureStream(30);
@@ -178,7 +210,7 @@ const startRecording = () => {
     } catch (e) {
         mediaRecorder = new MediaRecorder(canvasStream, { mimeType: "video/webm" });
     }
-    
+
     mediaRecorder.start();
     mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -189,7 +221,7 @@ const startRecording = () => {
 
 const stopRecording = () => {
     mediaRecorder.stop();
-    
+
     mediaRecorder.onstop = () => {
         const type = mediaRecorder.mimeType || "video/mp4";
         const blob = new Blob(chunks, { type });
@@ -213,4 +245,10 @@ stopRecBtn.addEventListener("click", () => {
     recordBtn.style.display = "block";
     stopRecBtn.style.display = "none";
     stopRecording();
+});
+
+cameraSelect.addEventListener("change", async () => {
+    selectedCameraId = cameraSelect.value;
+    detectCameraType(selectedCameraId);
+    await startVideo();
 });

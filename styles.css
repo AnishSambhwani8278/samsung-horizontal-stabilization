@@ -4,7 +4,7 @@
     padding: 0;
 }
 
-body{
+body {
     font-family: 'Poppins', sans-serif;
     display: flex;
     flex-direction: column;
@@ -14,7 +14,7 @@ body{
     background-color: #f5f5f5;
 }
 
-video{
+video {
     width: 100%;
     max-width: 640px;
     height: auto;
@@ -23,12 +23,7 @@ video{
     object-fit: cover;
 }
 
-.video-container {
-    transform: scaleX(-1);
-    -webkit-transform: scaleX(-1);
-}
-
-button{
+button {
     padding: 10px 20px;
     font-size: 16px;
     border-radius: 5px;
@@ -39,7 +34,7 @@ button{
     margin-top: 20px;
 }
 
-button:active{
+button:active {
     background-color: #0056b3;
 }
 
@@ -68,4 +63,10 @@ canvas {
     border-radius: 14px;
     font-family: Arial, sans-serif;
     line-height: 1.6;
+}
+
+.select-class {
+    border-radius: 10px;
+    margin: 5%;
+    padding: 3%;
 }
