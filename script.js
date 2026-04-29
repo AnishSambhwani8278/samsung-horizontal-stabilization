@@ -184,12 +184,30 @@ const alphaFunction = (event) => {
 };
 
 startButton.addEventListener("click", async () => {
-    await loadCameras();
-    await startVideo();
+    try {
+        if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+            const permission = await DeviceOrientationEvent.requestPermission();
 
-    window.removeEventListener("deviceorientation", alphaFunction);
-    window.addEventListener("deviceorientation", alphaFunction);
-    cameraSelect.style.display = "block";
+            if (permission !== "granted") {
+                alert("Motion permission denied");
+                return;
+            }
+        }
+
+        await loadCameras();
+        await startVideo();
+
+        window.removeEventListener("deviceorientation", alphaFunction);
+        window.addEventListener("deviceorientation", alphaFunction);
+
+        cameraSelect.style.display = "block";
+    } catch (err) {
+        console.log(err);
+        alert("Permission failed");
+    }
 });
 
 stopButton.addEventListener("click", async () => {
